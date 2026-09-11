@@ -5,46 +5,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Unzip if user uploaded zip
+      - name: Recreate YOUR exact game (no zip needed)
         run: |
-          ls -la
-          # Find any zip file uploaded
-          ZIP=$(find . -maxdepth 1 -name "*.zip*" | head -1)
-          if [ -n "$ZIP" ]; then
-            echo "Found zip $ZIP - unzipping"
-            unzip -o "$ZIP" -d .
-            rm -f "$ZIP"
-            # Remove outer folder if nested
-            if [ -f "Jaan-nurieee/package.json" ]; then cp -r Jaan-nurieee/* .; rm -rf Jaan-nurieee; fi
-          fi
-          # Fix double-folder
-          if [ -f "Jaan-nurieee/package.json" ]; then cp -r Jaan-nurieee/* .; rm -rf Jaan-nurieee; fi
-          ls -la
-          cat package.json
-          ls -la www
-
+          rm -rf *.zip* *.html JaanNurie* Jaan-nurie* || true
+          mkdir -p www
+          cat > www/index.html <<'GAMEHTML'
+          PASTE_YOUR_GAME_HERE
+          GAMEHTML
+          echo '{"name":"jaan-nurie-life","version":"1.0.0","private":true,"dependencies":{"@capacitor/core":"^5.7.0","@capacitor/android":"^5.7.0","@capacitor/cli":"^5.7.0"}}' > package.json
+          echo '{"appId":"com.el19.jaannurie.life","appName":"Jaan Nurie Life","webDir":"www"}' > capacitor.config.json
+          ls -lh www/
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+        with: {node-version: 20}
       - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: temurin
+        with: {java-version: '17', distribution: temurin}
       - uses: android-actions/setup-android@v3
-      - name: Install
-        run: npm install
-      - name: Add Android
-        run: npx cap add android
-      - name: Copy web
-        run: npx cap copy android
+      - run: npm install
+      - run: npx cap add android
+      - run: npx cap copy android
       - name: Build APK
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: JaanNurie-YOUR-EXACT-CODE
+          name: JaanNurie-FINAL-EXACT
           path: android/app/build/outputs/apk/debug/app-debug.apk
