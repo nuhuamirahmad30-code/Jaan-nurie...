@@ -6,21 +6,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fix double-folder
+      - name: Unzip if user uploaded zip
         run: |
-          echo "Looking for package.json..."
-          FOUND=$(find . -name "package.json" -not -path "*/node_modules/*" | head -1)
-          echo "Found at $FOUND"
-          if [ "$FOUND" != "./package.json" ] && [ -n "$FOUND" ]; then
-            DIR=$(dirname "$FOUND")
-            echo "Moving from $DIR to root"
-            cp -r "$DIR"/* .
-            cp -r "$DIR"/.* . 2>/dev/null || true
-            rm -rf "$DIR"
-            # If DIR was nested like Jaan-nurieee, remove outer too
-            if [ -d "Jaan-nurieee" ]; then rm -rf Jaan-nurieee; fi
-            if [ -d "Jaan-nurie..." ]; then rm -rf Jaan-nurie...; fi
+          ls -la
+          # Find any zip file uploaded
+          ZIP=$(find . -maxdepth 1 -name "*.zip*" | head -1)
+          if [ -n "$ZIP" ]; then
+            echo "Found zip $ZIP - unzipping"
+            unzip -o "$ZIP" -d .
+            rm -f "$ZIP"
+            # Remove outer folder if nested
+            if [ -f "Jaan-nurieee/package.json" ]; then cp -r Jaan-nurieee/* .; rm -rf Jaan-nurieee; fi
           fi
+          # Fix double-folder
+          if [ -f "Jaan-nurieee/package.json" ]; then cp -r Jaan-nurieee/* .; rm -rf Jaan-nurieee; fi
           ls -la
           cat package.json
           ls -la www
@@ -33,22 +32,17 @@ jobs:
           java-version: '17'
           distribution: temurin
       - uses: android-actions/setup-android@v3
-
       - name: Install
         run: npm install
-
       - name: Add Android
         run: npx cap add android
-
       - name: Copy web
         run: npx cap copy android
-
       - name: Build APK
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
